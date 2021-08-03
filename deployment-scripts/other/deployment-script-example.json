@@ -1,0 +1,76 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#", //"https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+    "parameters": {
+        "appName": {
+            "type": "string",
+            "defaultValue": "none",
+            "metadata": {
+                "description": "The name for the function app. It must only contain characters and numbers, and be 6 chars long max."
+            }
+        }
+    },
+	"variables": {
+        "eventSourceKeyName": "allinone"
+	},
+    "resources": [
+      {
+        "type": "Microsoft.Resources/deploymentScripts",
+        "apiVersion": "2020-10-01",
+        "name": "exampleScript",
+        "location": "[resourceGroup().location]",
+        "kind": "AzurePowerShell", // or "AzureCLI"
+        //"identity": {
+        //  "type": "userAssigned",
+        //  "userAssignedIdentities": {
+        //    "/subscriptions/ ... /resourceGroups/myResourceGroup/providers/Microsoft.ManagedIdentity/userAssignedIdentities/myID": {}
+        //  }
+        //},
+        "properties": {
+          "forceUpdateTag": "1", //"[parameters('utcValue')]", // or some fixed value if do not want to reexec
+          "containerSettings": {
+            "containerGroupName": "example-deployment-script"
+          },
+          //"storageAccountSettings": {
+          //  "storageAccountName": "myStorageAccount",
+          //  "storageAccountKey": "myKey"
+          //},
+          "azPowerShellVersion": "3.0",  // or "azCliVersion": "2.0.80",
+          "arguments": "-name \\\"John Dole\\\"",
+          "environmentVariables": [
+            {
+              "name": "UserName",
+              "value": "jdole"
+            },
+            {
+              "name": "Password",
+              "secureValue": "jDolePassword"
+            }
+          ],
+          "scriptContent": "
+            param([string] $name)
+            $output = 'Hello {0}. The username is {1}, the password is {2}.' -f $name,${Env:UserName},${Env:Password}
+            $d = Get-Date
+            Write-Output $output
+            $DeploymentScriptOutputs = @{}
+            $DeploymentScriptOutputs['fullName'] = $output
+            $DeploymentScriptOutputs['date'] = $d
+          ", // or "primaryScriptUri": "https://raw.githubusercontent.com/Azure/azure-docs-json-samples/master/deployment-script/deploymentscript-helloworld.ps1",
+          "supportingScriptUris":[],
+          "timeout": "PT30M",
+          "cleanupPreference": "OnSuccess",
+          "retentionInterval": "P1D"
+        }
+      }
+    ],
+    "outputs": {
+      "fullName": {
+        "value": "[reference('exampleScript').outputs.fullName]",
+        "type": "string"
+      },
+      "date": {
+        "value": "[reference('exampleScript').outputs.date]",
+        "type": "string"
+      }
+    }
+}

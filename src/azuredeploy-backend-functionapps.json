@@ -1,30 +1,27 @@
 {
-    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#", //"https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
 	"contentVersion": "1.0.0.0",
     "parameters": {
+        "tags":{
+            "type":"object",
+            "defaultValue":{
+                "Environment":"dev"
+            }
+        },
         "appName": {
             "type": "string",
-            "maxLength": 6,
+            //"maxLength": 6,
             "metadata": {
                 "description": "The name for the function app. It must only contain characters and numbers, and be 6 chars long max."
             }
         },
         "storageAccountType": {
             "type": "string",
-            "defaultValue": "Standard_LRS",
-            "allowedValues": [
-                "Standard_LRS",
-                "Standard_ZRS",
-                "Standard_GRS",
-                "Standard_RAGRS"
-            ]
+            "defaultValue": "Standard_LRS"
         },
         "slotName": {
             "type": "string",
-            "defaultValue": "staging",
-            "allowedValues": [
-                "staging"
-            ]
+            "defaultValue": "staging"
         },
         "appInsightsLocation": {
             "type": "string",
@@ -44,23 +41,57 @@
             "metadata": {
               "description": "Cosmos DB collection name"
             }
+        },
+        "droneStatusFunctionZipSas": {
+            "type": "string"
+        },
+        "droneTelemetryFunctionZipSas": {
+            "type": "string"
+        },
+        "apiManagementArmTplSpecResourceGroup": {
+            "type": "string",
+            "metadata": {
+              "description": "Name of the Resource Group containing the API Management ARM Temlate Spec"
+            }
+        },
+        "apiManagementArmTplSpecName": {
+            "type": "string",
+            "metadata": {
+              "description": "Name of the API Management ARM Temlate Spec"
+            }
+        },
+        "droneStatusFunctionAppAADTokenIssuerUrl": {
+            "type": "string"
+        },
+        "droneStatusFunctionAppAADClientId": {
+            "type": "string"
+        },
+        "tenantId": {
+            "type": "string"
+        },
+        "droneStatusClientStorageAccountName": {
+            "type": "string"
+        },
+        "clientAppArmTplSpecName": {
+            "type": "string"
         }
     },
 	"variables": {
-        "droneStatusStorageAccountName": "[toLower(concat(parameters('appName'),'ds',uniqueString(resourceGroup().id)))]",
-        "droneTelemetryStorageAccountName": "[toLower(concat(parameters('appName'),'dt', uniqueString(resourceGroup().id)))]",
-        "droneTelemetryDeadLetterStorageQueueAccountName": "[toLower(concat(parameters('appName'),'dtq',uniqueString(resourceGroup().id)))]",
+        //uniqueString(resourceGroup().id)
+        "droneStatusStorageAccountName": "[replace(toLower(concat(parameters('appName'),'status')), '-', '')]",
+        "droneTelemetryStorageAccountName": "[replace(toLower(concat(parameters('appName'),'telemetry')), '-', '')]",
+        "droneTelemetryDeadLetterStorageQueueAccountName": "[replace(toLower(concat(parameters('appName'),'deadletter')), '-', '')]",
         "hostingPlanName": "[parameters('appName')]",
-        "droneStatusFunctionAppName": "[concat(parameters('appName'),uniqueString(resourceGroup().id),'-dronestatus')]",
-        "droneTelemetryFunctionAppName": "[concat(parameters('appName'),uniqueString(resourceGroup().id),'-dronetelemetry')]",
+        "droneStatusFunctionAppName": "[concat(parameters('appName'), '-status')]",
+        "droneTelemetryFunctionAppName": "[concat(parameters('appName'), '-telemetry')]",
         "droneStatusStorageAccountId": "[concat(resourceGroup().id,'/providers/','Microsoft.Storage/storageAccounts/', variables('droneStatusStorageAccountName'))]",
         "droneTelemetryStorageAccountId": "[concat(resourceGroup().id,'/providers/','Microsoft.Storage/storageAccounts/', variables('droneTelemetryStorageAccountName'))]",
         "droneTelemetryDeadLetterStorageQueueAccountId": "[concat(resourceGroup().id,'/providers/','Microsoft.Storage/storageAccounts/', variables('droneTelemetryDeadLetterStorageQueueAccountName'))]",
-        "droneStatusAppInsightsName": "[concat(parameters('appName'), uniqueString(resourceGroup().id),'-ds-ai')]",
-        "droneTelemetryAppInsightsName": "[concat(parameters('appName'), uniqueString(resourceGroup().id),'-dt-ai')]",
-        "cosmosDatabaseAccount": "[toLower(concat(parameters('appName'), uniqueString(resourceGroup().id)))]",
-        "eventHubNameSpaceName": "[concat(parameters('appName'),uniqueString(resourceGroup().id),'-ns')]",
-        "eventHubName": "[concat(parameters('appName'),'-eh')]",
+        "droneStatusAppInsightsName": "[concat(parameters('appName'), '-status')]",
+        "droneTelemetryAppInsightsName": "[concat(parameters('appName'), '-telemetry')]",
+        "cosmosDatabaseAccount": "[toLower(parameters('appName'))]",
+        "eventHubNameSpaceName": "[parameters('appName')]",
+        "eventHubName": "[parameters('appName')]",
         "eventHubId": "[concat('Microsoft.EventHub/namespaces/', variables('eventHubNamespaceName'), '/EventHubs/',variables('eventHubName'))]",
         "eventHubConsumerGroup": "dronetelemetry",
         "sendEventSourceKeyName": "send",
@@ -68,9 +99,22 @@
         "eventSourceKeyName": "allinone"
 	},
     "resources": [
+    // {
+    //   "type": "Microsoft.Resources/tags",
+    //   "name": "global-tags",
+    //   "apiVersion": "2021-04-01",
+    //   "properties": {
+    //     "tags": {
+    //       "Environment": "dev",
+    //       "Project": "dsaas",
+    //       "Owner": "me"
+    //     }
+    //   }
+    // },
     {
         "name": "[variables('droneStatusStorageAccountName')]",
         "type": "Microsoft.Storage/storageAccounts",
+        //"tags":"[parameters('tags')]",
         "location": "[resourceGroup().location]",
         "apiVersion": "2017-10-01",
         "sku": {
@@ -153,30 +197,28 @@
         }
     },
     {
-        "type": "microsoft.insights/components",
-        "kind": "other",
+        "apiVersion": "2020-02-02-preview", //"2015-05-01",
         "name": "[variables('droneStatusAppInsightsName')]",
-        "apiVersion": "2014-04-01",
-        "location": "[parameters('appInsightsLocation')]",
+        "type": "Microsoft.Insights/components",
+        "kind": "web",
+        "location": "[resourceGroup().location]",
         "tags": {},
-        "scale": null,
         "properties": {
+            "Application_Type": "web",
             "ApplicationId": "[variables('droneStatusFunctionAppName')]"
-        },
-        "dependsOn": []
+        }
     },
     {
-        "type": "microsoft.insights/components",
-        "kind": "other",
+        "apiVersion": "2020-02-02-preview", //"2015-05-01",
         "name": "[variables('droneTelemetryAppInsightsName')]",
-        "apiVersion": "2014-04-01",
-        "location": "[parameters('appInsightsLocation')]",
+        "type": "Microsoft.Insights/components",
+        "kind": "web",
+        "location": "[resourceGroup().location]",
         "tags": {},
-        "scale": null,
         "properties": {
+            "Application_Type": "web",
             "ApplicationId": "[variables('droneTelemetryFunctionAppName')]"
-        },
-        "dependsOn": []
+        }
     },
     {
         "type": "Microsoft.Web/serverfarms",
@@ -189,21 +231,120 @@
             "sku": "Dynamic"
         }
     },
+    // CosmosDB
     {
         "name": "[variables('cosmosDatabaseAccount')]",
         "type": "Microsoft.DocumentDB/databaseAccounts",
-        "apiVersion": "2015-04-08",
+        "apiVersion": "2021-04-15",
         "location": "[resourceGroup().location]",
         "tags": {
             "displayName": "cosmosDB"
         },
         "kind": "GlobalDocumentDB",
         "properties": {
-            "databaseAccountOfferType": "Standard"
+                "disableLocalAuth": false,
+                //"createMode": "Default", // ARM what-if
+                "publicNetworkAccess": "Enabled",
+                "enableAutomaticFailover": false,
+                "enableMultipleWriteLocations": false,
+                "isVirtualNetworkFilterEnabled": false,
+                "virtualNetworkRules": [],
+                "disableKeyBasedMetadataWriteAccess": false,
+                "enableFreeTier": false,
+                "enableAnalyticalStorage": false,
+                "databaseAccountOfferType": "Standard",
+                "defaultIdentity": "FirstPartyIdentity",
+                "networkAclBypass": "None",
+                "consistencyPolicy": {
+                    "defaultConsistencyLevel": "Session",
+                    "maxIntervalInSeconds": 5,
+                    "maxStalenessPrefix": 100
+                },
+                "locations": [
+                    {
+                        "locationName": "West US 2",
+                        "provisioningState": "Succeeded",
+                        "failoverPriority": 0,
+                        "isZoneRedundant": false
+                    }
+                ],
+                "cors": [],
+                "ipRules": [],
+                "backupPolicy": {
+                    "type": "Periodic",
+                    "periodicModeProperties": {
+                        "backupIntervalInMinutes": 1440,
+                        "backupRetentionIntervalInHours": 48,
+                        "backupStorageRedundancy": "Geo"
+                    }
+                },
+                "capabilities": [
+                    {
+                        "name": "EnableServerless"
+                    }
+                ],
+                "networkAclBypassResourceIds": []
+            }
+    },
+    {
+        "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
+        "apiVersion": "2021-04-15",
+        "name": "[concat(parameters('cosmosDatabaseName'), '/', parameters('cosmosDatabaseName'))]",
+        "dependsOn": [
+            "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosDatabaseAccount'))]"
+        ],
+        "properties": {
+            "resource": {
+                "id": "[parameters('cosmosDatabaseName')]"
+            }
         }
     },
     {
-        "apiVersion": "2015-08-01",
+        "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+        "apiVersion": "2021-04-15",
+        "name": "[concat(parameters('cosmosDatabaseName'), '/', parameters('cosmosDatabaseName'), '/', parameters('cosmosDatabaseName'))]",
+        "dependsOn": [
+            "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('cosmosDatabaseName'), parameters('cosmosDatabaseName'))]",
+            "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosDatabaseAccount'))]"
+        ],
+        "properties": {
+            "resource": {
+                "id": "[parameters('cosmosDatabaseName')]",
+                "allowMaterializedViews": false, // ARM what-if
+                "indexingPolicy": { // ARM what-if
+                    "automatic": true, // ARM what-if
+                    "includedPaths": [ // ARM what-if
+                        { "path": "/*" } // ARM what-if
+                    ]
+                },
+                "partitionKey": {
+                    "paths": [
+                        "/id"
+                    ],
+                    "kind": "Hash"
+                }
+            }
+        }
+    },
+    // {
+    //     "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/throughputSettings",
+    //     "apiVersion": "2021-04-15",
+    //     "name": "[concat(parameters('cosmosDatabaseName'), '/', parameters('cosmosDatabaseName'), '/', parameters('cosmosDatabaseName'), '/default')]",
+    //     "dependsOn": [
+    //         "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', parameters('cosmosDatabaseName'), parameters('cosmosDatabaseName'), parameters('cosmosDatabaseName'))]",
+    //         "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('cosmosDatabaseName'), parameters('cosmosDatabaseName'))]",
+    //         "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosDatabaseName'))]"
+    //     ],
+    //     "properties": {
+    //         "resource": {
+    //             "throughput": 400
+    //         }
+    //     }
+    // },
+
+    // End of CosmosDB
+    {
+        "apiVersion": "2020-12-01", //"2018-11-01",
         "type": "Microsoft.Web/sites",
         "name": "[variables('droneStatusFunctionAppName')]",
         "location": "[resourceGroup().location]",
@@ -222,6 +363,10 @@
             "siteConfig": {
                 "appSettings": [
                     {
+                    "name": "WEBSITE_RUN_FROM_PACKAGE",
+                    "value": "[parameters('droneStatusFunctionZipSas')]"
+                    },
+                    {
                         "name": "AzureWebJobsStorage",
                         "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('droneStatusStorageAccountName'), ';AccountKey=', listKeys(variables('droneStatusStorageAccountId'),'2015-05-01-preview').key1, ';EndpointSuffix=',environment().suffixes.storage)]"
                     },
@@ -229,13 +374,18 @@
                         "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
                         "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('droneStatusStorageAccountName'), ';AccountKey=', listKeys(variables('droneStatusStorageAccountId'),'2015-05-01-preview').key1, ';EndpointSuffix=',environment().suffixes.storage)]"
                     },
+                    // {
+                    //     "name": "WEBSITE_CONTENTSHARE",
+                    //     "value": "[toLower(variables('droneStatusFunctionAppName'))]"
+                    // },
                     {
-                        "name": "WEBSITE_CONTENTSHARE",
-                        "value": "[toLower(variables('droneStatusFunctionAppName'))]"
+                        "name": "FUNCTIONS_WORKER_RUNTIME",
+                        "value": "dotnet"
                     },
                     {
                         "name": "FUNCTIONS_EXTENSION_VERSION",
-                        "value": "~2"
+                        "value": "~3"
+                    
                     },
                     {
                         "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
@@ -265,11 +415,27 @@
             }
         }
     },
+        {
+            "type": "Microsoft.Web/sites/config",
+            "apiVersion": "2020-12-01", //"2018-11-01",
+            "name": "[concat(variables('droneStatusFunctionAppName'), '/authsettings')]",
+            "location": "West US 2",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', variables('droneStatusFunctionAppName'))]"
+            ],
+            "properties": {
+                "enabled": true,
+                "unauthenticatedClientAction": "RedirectToLoginPage",
+                "defaultProvider": "AzureActiveDirectory",
+                "clientId": "[parameters('droneStatusFunctionAppAADClientId')]",
+                "issuer": "[parameters('droneStatusFunctionAppAADTokenIssuerUrl')]"
+            }
+        },
     {
         "type": "Microsoft.Web/sites/slots",
         "kind": "functionapp",
         "name": "[concat(variables('droneStatusFunctionAppName'), '/', parameters('slotName'))]",
-        "apiVersion": "2016-08-01",
+        "apiVersion": "2020-12-01", //"2016-08-01",
         "location": "[resourceGroup().location]",
         "scale": null,
         "properties": {
@@ -287,6 +453,119 @@
         ]
     },
     {
+        "apiVersion": "2020-12-01", //"2018-11-01",
+        "type": "Microsoft.Web/sites",
+        "name": "[variables('droneTelemetryFunctionAppName')]",
+        "location": "[resourceGroup().location]",
+        "tags": {
+            "displayName": "Drone Telemetry Function App"
+        },
+        "kind": "functionapp",
+        // for Linux it should be "functionapp,linux"
+        "dependsOn": [
+            "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
+            "[resourceId('Microsoft.Storage/storageAccounts', variables('droneTelemetryStorageAccountName'))]",
+            "[concat('Microsoft.DocumentDb/databaseAccounts/', variables('cosmosDatabaseAccount'))]",
+            "[resourceId('microsoft.insights/components', variables('droneTelemetryAppInsightsName'))]",
+            "[variables('eventHubId')]"
+        ],
+        "properties": {
+            "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
+            // this property specifies that the function app is Linux based (sic!):
+            //"reserved": true,
+            "siteConfig": {
+                "appSettings": [
+                    {
+                    "name": "WEBSITE_RUN_FROM_PACKAGE",
+                    "value": "[parameters('droneTelemetryFunctionZipSas')]"
+                    },
+                    {
+                        "name": "AzureWebJobsStorage",
+                        "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('droneTelemetryStorageAccountName'), ';AccountKey=', listKeys(variables('droneTelemetryStorageAccountId'),'2015-05-01-preview').key1, ';EndpointSuffix=',environment().suffixes.storage)]"
+                    },
+                    {
+                        "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",  // not supportes\required for Linux based 
+                        "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('droneTelemetryStorageAccountName'), ';AccountKey=', listKeys(variables('droneTelemetryStorageAccountId'),'2015-05-01-preview').key1, ';EndpointSuffix=',environment().suffixes.storage)]"
+                    },
+                    // {
+                    //     "name": "WEBSITE_CONTENTSHARE", // also not supportes\required for Linux based 
+                    //     "value": "[toLower(variables('droneTelemetryFunctionAppName'))]"
+                    // },
+                    {
+                        "name": "FUNCTIONS_WORKER_RUNTIME",
+                        "value": "dotnet"
+                    },
+                    {
+                        "name": "FUNCTIONS_EXTENSION_VERSION",
+                        "value": "~3"
+                    },
+                    {
+                        "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
+                        "value": "[reference(concat('microsoft.insights/components/', variables('droneTelemetryAppInsightsName'))).InstrumentationKey]"
+                    },
+                    {
+                        "name": "COSMOSDB_CONNECTION_STRING",
+                        "value": "[concat('AccountEndpoint=',reference(concat('Microsoft.DocumentDb/databaseAccounts/',variables('cosmosDatabaseAccount'))).documentEndpoint,';AccountKey=',listKeys(resourceId('Microsoft.DocumentDb/databaseAccounts', variables('cosmosDatabaseAccount')), '2015-04-08').primaryMasterKey,';')]"
+                    },
+                    {
+                        "name": "CosmosDBEndpoint",
+                        "value": "[reference(concat('Microsoft.DocumentDb/databaseAccounts/',variables('cosmosDatabaseAccount'))).documentEndpoint]"
+                    },
+                    {
+                        "name": "CosmosDBKey",
+                        "value": "[listKeys(resourceId('Microsoft.DocumentDb/databaseAccounts', variables('cosmosDatabaseAccount')), '2015-04-08').primaryMasterKey]"
+                    },
+                    {
+                        "name": "COSMOSDB_DATABASE_NAME",
+                        "value": "[parameters('cosmosDatabaseName')]"
+                    },
+                    {
+                        "name": "COSMOSDB_DATABASE_COL",
+                        "value": "[parameters('cosmosDatabaseCollection')]"
+                    },
+                    {
+                        "name": "EventHubConnection",
+                        "value": "[listKeys(concat(variables('eventHubId'),'/authorizationRules/listen/'), '2017-04-01').primaryConnectionString]"
+                    },
+                    {
+                        "name": "EventHubConsumerGroup",
+                        "value": "[variables('eventHubConsumerGroup')]"
+                    },
+                    {
+                        "name": "EventHubName",
+                        "value": "[variables('eventHubName')]"
+                    },
+                    {
+                        "name": "DeadLetterStorage",
+                        "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('droneTelemetryDeadLetterStorageQueueAccountName'), ';AccountKey=', listKeys(variables('droneTelemetryDeadLetterStorageQueueAccountId'),'2015-05-01-preview').key1, ';EndpointSuffix=',environment().suffixes.storage)]"
+                    }
+                ]
+            }
+        }
+    },
+    {
+        "type": "Microsoft.Web/sites/slots",
+        "kind": "functionapp",
+        "name": "[concat(variables('droneTelemetryFunctionAppName'), '/', parameters('slotName'))]",
+        "apiVersion": "2020-12-01", //"2016-08-01",
+        "location": "[resourceGroup().location]",
+        "scale": null,
+        "properties": {
+            "enabled": true,
+            "reserved": false,
+            "clientAffinityEnabled": true,
+            "clientCertEnabled": false,
+            "hostNamesDisabled": false,
+            "dailyMemoryTimeQuota": 0,
+            "cloningInfo": null
+        },
+        "dependsOn": [
+            "[resourceId('Microsoft.Web/sites', variables('droneTelemetryFunctionAppName'))]",
+            "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]"
+        ]
+    },
+    // EventHub resources
+    {
       "apiVersion": "2017-04-01",
       "name": "[variables('eventHubNamespaceName')]",
       "type": "Microsoft.EventHub/Namespaces",
@@ -295,8 +574,8 @@
         "name": "Standard"
       },
       "properties": {
-        "isAutoInflateEnabled": "true",
-        "maximumThroughputUnits": "20"
+        "isAutoInflateEnabled": true,
+        "maximumThroughputUnits": 3
       },
       "resources": [
         {
@@ -307,8 +586,8 @@
             "[concat('Microsoft.EventHub/namespaces/', variables('eventHubNamespaceName'))]"
           ],
           "properties": {
-            "messageRetentionInDays": "1",
-            "partitionCount": "4"
+            "messageRetentionInDays": 1,
+            "partitionCount": 4
           },
           "resources": [
             {
@@ -366,87 +645,69 @@
           ]
         }
       ]
-    },
+    } ,
+    // End EventHub resources
+
+    // API Management
+
     {
-        "apiVersion": "2015-08-01",
-        "type": "Microsoft.Web/sites",
-        "name": "[variables('droneTelemetryFunctionAppName')]",
-        "location": "[resourceGroup().location]",
-        "tags": {
-            "displayName": "Drone Telemetry Function App"
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2020-06-01",
+      "name": "linked-APIManagementDeployment",
+      "dependsOn": [
+          "[resourceId('Microsoft.Web/sites', variables('droneStatusFunctionAppName'))]",
+          "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "id": "[resourceId(parameters('apiManagementArmTplSpecResourceGroup'), 'Microsoft.Resources/templateSpecs/versions', parameters('apiManagementArmTplSpecName'), '1.0.0')]"
         },
-        "kind": "functionapp",
-        "dependsOn": [
-            "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
-            "[resourceId('Microsoft.Storage/storageAccounts', variables('droneTelemetryStorageAccountName'))]",
-            "[concat('Microsoft.DocumentDb/databaseAccounts/', variables('cosmosDatabaseAccount'))]",
-            "[resourceId('microsoft.insights/components', variables('droneTelemetryAppInsightsName'))]",
-            "[variables('eventHubId')]"
-        ],
-        "properties": {
-            "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
-            "siteConfig": {
-                "appSettings": [
-                    {
-                        "name": "AzureWebJobsStorage",
-                        "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('droneTelemetryStorageAccountName'), ';AccountKey=', listKeys(variables('droneTelemetryStorageAccountId'),'2015-05-01-preview').key1, ';EndpointSuffix=',environment().suffixes.storage)]"
-                    },
-                    {
-                        "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
-                        "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('droneTelemetryStorageAccountName'), ';AccountKey=', listKeys(variables('droneTelemetryStorageAccountId'),'2015-05-01-preview').key1, ';EndpointSuffix=',environment().suffixes.storage)]"
-                    },
-                    {
-                        "name": "WEBSITE_CONTENTSHARE",
-                        "value": "[toLower(variables('droneTelemetryFunctionAppName'))]"
-                    },
-                    {
-                        "name": "FUNCTIONS_EXTENSION_VERSION",
-                        "value": "~2"
-                    },
-                    {
-                        "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
-                        "value": "[reference(concat('microsoft.insights/components/', variables('droneTelemetryAppInsightsName'))).InstrumentationKey]"
-                    },
-                    {
-                        "name": "COSMOSDB_CONNECTION_STRING",
-                        "value": "[concat('AccountEndpoint=',reference(concat('Microsoft.DocumentDb/databaseAccounts/',variables('cosmosDatabaseAccount'))).documentEndpoint,';AccountKey=',listKeys(resourceId('Microsoft.DocumentDb/databaseAccounts', variables('cosmosDatabaseAccount')), '2015-04-08').primaryMasterKey,';')]"
-                    },
-                    {
-                        "name": "CosmosDBEndpoint",
-                        "value": "[reference(concat('Microsoft.DocumentDb/databaseAccounts/',variables('cosmosDatabaseAccount'))).documentEndpoint]"
-                    },
-                    {
-                        "name": "CosmosDBKey",
-                        "value": "[listKeys(resourceId('Microsoft.DocumentDb/databaseAccounts', variables('cosmosDatabaseAccount')), '2015-04-08').primaryMasterKey]"
-                    },
-                    {
-                        "name": "COSMOSDB_DATABASE_NAME",
-                        "value": "[parameters('cosmosDatabaseName')]"
-                    },
-                    {
-                        "name": "COSMOSDB_DATABASE_COL",
-                        "value": "[parameters('cosmosDatabaseCollection')]"
-                    },
-                    {
-                        "name": "EventHubConnection",
-                        "value": "[listKeys(concat(variables('eventHubId'),'/authorizationRules/listen/'), '2017-04-01').primaryConnectionString]"
-                    },
-                    {
-                        "name": "EventHubConsumerGroup",
-                        "value": "[variables('eventHubConsumerGroup')]"
-                    },
-                    {
-                        "name": "EventHubName",
-                        "value": "[variables('eventHubName')]"
-                    },
-                    {
-                        "name": "DeadLetterStorage",
-                        "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('droneTelemetryDeadLetterStorageQueueAccountName'), ';AccountKey=', listKeys(variables('droneTelemetryDeadLetterStorageQueueAccountId'),'2015-05-01-preview').key1, ';EndpointSuffix=',environment().suffixes.storage)]"
-                    }
-                ]
-            }
+        "parameters": {
+            "functionAppNameV1": {
+                "value": "[variables('droneStatusFunctionAppName')]"
+            },
+            "functionAppCodeV1": {
+                "value": "[listkeys(concat(resourceGroup().id, '/providers/Microsoft.Web/sites/', variables('droneStatusFunctionAppName'), '/host/default/'),'2016-08-01').functionKeys.default]"
+            },
+            "functionAppUrlV1": {
+                "value": "[concat('https://',reference(resourceId('Microsoft.Web/sites', variables('droneStatusFunctionAppName')), '2018-02-01').defaultHostName, '/api')]"
+            },
+            "tenantId": {
+                "value": "[parameters('tenantId')]"
+            },
+            "appName": {
+                "value": "[parameters('appName')]"
+            },
+            "droneStatusFunctionAppAADClientId": {
+                "value": "[parameters('droneStatusFunctionAppAADClientId')]"
+            }            
         }
+      }
+    },
+    // End API Management
+    // Frontend - client app
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2020-06-01",
+      "name": "linked-ClientAppDeployment",
+      "dependsOn": [],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "id": "[resourceId(parameters('apiManagementArmTplSpecResourceGroup'), 'Microsoft.Resources/templateSpecs/versions', parameters('clientAppArmTplSpecName'), '1.0.0')]"
+        },
+        "parameters": {
+            "appName": {
+                "value": "[parameters('appName')]"
+            },
+            "droneStatusClientStorageAccountName": {
+                "value": "[parameters('droneStatusClientStorageAccountName')]"
+            }            
+        }
+      }
     }
+    // End of Frontend - client app
     ],
     "outputs": {
         "cosmosDatabaseAccount": {
@@ -460,6 +721,14 @@
         "droneTelemetryFunctionAppName": {
             "type": "string",
             "value": "[variables('droneTelemetryFunctionAppName')]"
+        },
+        "droneStatusFunctionAppKey": {
+            "type": "string",
+            "value": "[listkeys(concat(resourceGroup().id, '/providers/Microsoft.Web/sites/', variables('droneStatusFunctionAppName'), '/host/default/'),'2016-08-01').functionKeys.default]"
+        },
+        "droneStatusFunctionAppUrl": {
+            "type": "string",
+            "value": "[concat(reference(resourceId('Microsoft.Web/sites', variables('droneStatusFunctionAppName')), '2018-02-01').defaultHostName, '/api')]"
         }
     }
 }

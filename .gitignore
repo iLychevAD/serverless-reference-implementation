@@ -334,3 +334,9 @@ ASALocalRun/
 
 # Azure functions tools for VS Code
 local.settings.json
+
+# Ignore `dotnet publish` output directories
+drone*publish*
+built
+
+*zip

@@ -1,0 +1,178 @@
+#!/bin/bash
+
+az='docker run --rm --name az -v /home/user/.azure:/root/.azure -v /tmp/az:/tmp/az -it mcr.microsoft.com/azure-cli az '
+
+GIT_COMMIT_SHA=`git rev-parse --short HEAD`
+
+LOCATION=westus2
+RESOURCEGROUP=dev-dsaas-portal
+APPNAME=dev-dsaas-portal
+APP_INSIGHTS_LOCATION=westus2
+COSMOSDB_DATABASE_NAME=dev-dsaas-portal
+COSMOSDB_DATABASE_COL=dev-dsaas-portal
+
+# Build and upload Function code to a storage account
+echo "                Status function:"
+## Get the functiona app name from the deployment output
+DRONE_STATUS_FUNCTION_APP_NAME="${APPNAME}-status"
+
+# Publish the function to a local directory
+# dotnet publish src/DroneStatus/dotnet/DroneStatusFunctionApp/ \
+#        --configuration Release \
+#        --output `pwd`/dronestatus-publish
+# (cd dronestatus-publish && zip -r DroneStatusFunction.zip *)
+
+# Alternatively, if you have Microsoft Visual Studio installed:
+# dotnet publish /p:PublishProfile=Azure /p:Configuration=Release
+
+# Deploy the function to the function app
+sudo cp `pwd`/dronestatus-publish/DroneStatusFunction.zip /tmp/az/
+# $az functionapp deployment source config-zip \
+#    --src /tmp/az/DroneStatusFunction.zip \
+#    -g $RESOURCEGROUP \
+#    -n ${DRONE_STATUS_FUNCTION_APP_NAME}
+
+echo "                 Telemetry function:"
+
+DRONE_TELEMETRY_FUNCTION_APP_NAME="${APPNAME}-telemetry"
+
+# Publish the function to a local directory
+# dotnet publish src/DroneTelemetry/DroneTelemetryFunctionApp/ \
+#        --configuration Release \
+#        --output `pwd`/dronetelemetry-publish
+# (cd dronetelemetry-publish && zip -r DroneTelemetryFunction.zip *)
+
+sudo cp `pwd`/dronetelemetry-publish/DroneTelemetryFunction.zip /tmp/az/
+# $az functionapp deployment source config-zip \
+#    --src /tmp/az/DroneTelemetryFunction.zip \
+#    -g $RESOURCEGROUP \
+#    -n ${DRONE_TELEMETRY_FUNCTION_APP_NAME}
+
+echo "Creating artifacts storage account"
+ARTIFACTS_STORAGE_ACCOUNT_NAME=devdsaasportalartifacts
+# $az group create -n $RESOURCEGROUP-artifacts -l $LOCATION
+# $az storage account create \
+#     --name $ARTIFACTS_STORAGE_ACCOUNT_NAME \
+#     --resource-group $RESOURCEGROUP-artifacts \
+#     --location $LOCATION \
+#     --sku Standard_LRS \
+#     --kind BlobStorage \
+#     --access-tier Hot
+
+# echo "Creating container"
+# $az storage container create \
+#     --name artifacts \
+#     --account-name $ARTIFACTS_STORAGE_ACCOUNT_NAME \
+#     --public-access off
+
+for FUNC in DroneTelemetryFunction DroneStatusFunction
+do
+   $az storage blob upload \
+      --file /tmp/az/${FUNC}.zip \
+      --container-name artifacts \
+      --name $GIT_COMMIT_SHA/${FUNC}.zip \
+      --account-name $ARTIFACTS_STORAGE_ACCOUNT_NAME
+   
+   SAS_END_DATETIME=`date -d '+1 hour' '+%FT%T' -u` # +1 hour to the current time in UTC
+   SAS=$( $az storage blob generate-sas \
+      --account-name $ARTIFACTS_STORAGE_ACCOUNT_NAME \
+      --container-name artifacts \
+      --name "$GIT_COMMIT_SHA/${FUNC}.zip" \
+      --permissions r \
+       --https-only \
+       --full-uri \
+      --expiry "${SAS_END_DATETIME}Z" | tail -1 | tr -d '"')
+   if [ $FUNC == "DroneTelemetryFunction" ]
+   then
+       DroneTelemetryFunction_SAS="$SAS"
+   else
+       DroneStatusFunction_SAS="$SAS"
+   fi
+done
+
+echo "Full link for Telemetry func: ${DroneTelemetryFunction_SAS}"
+echo "Full link for Status func: ${DroneStatusFunction_SAS}"
+
+# End with Function code
+
+# Upload API Management ARM template as a template spec
+# (https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/template-specs)
+echo "Upload API Management ARM template as a template spec"
+$az ts create \
+  --name storageSpec \
+  --version "1.0a" \
+  --resource-group $RESOURCEGROUP-artifacts \
+  --location $LOCATION \
+  --template-file "./azuredeploy-apim.json"
+
+# End API Management ARM templatespec
+
+#exit 
+echo "Creating RG $RESOURCEGROUP in $LOCATION region"
+$az group create -n $RESOURCEGROUP -l $LOCATION
+
+sudo cp src/azuredeploy-backend-functionapps.json /tmp/az/azuredeploy-backend-functionapps.json
+echo "What-if"
+$az deployment group what-if \
+   --mode Complete \
+   -g ${RESOURCEGROUP} \
+   --template-file /tmp/az/azuredeploy-backend-functionapps.json \
+   --parameters appName=${APPNAME} \
+   cosmosDatabaseName=${COSMOSDB_DATABASE_NAME} \
+   cosmosDatabaseCollection=${COSMOSDB_DATABASE_COL} \
+   droneStatusFunctionZipSas=$DroneStatusFunction_SAS \
+   droneTelemetryFunctionZipSas=$DroneTelemetryFunction_SAS \
+   tags='{"Environment":"dev"}'
+
+echo "Deploying resources..."
+DEPLOYMENT_NAME=$( echo `date '+%F_%T_%z'` | tr -d ':' | tr -d '+')
+# TODO: detect if is the first deploy and dont use rollback feature then
+$az deployment group create \
+   --mode Complete \
+   -g ${RESOURCEGROUP} \
+   --name $DEPLOYMENT_NAME \
+   --template-file /tmp/az/azuredeploy-backend-functionapps.json \
+   --parameters appName=${APPNAME} \
+   cosmosDatabaseName=${COSMOSDB_DATABASE_NAME} \
+   cosmosDatabaseCollection=${COSMOSDB_DATABASE_COL} \
+   droneStatusFunctionZipSas=$DroneStatusFunction_SAS \
+   droneTelemetryFunctionZipSas=$DroneTelemetryFunction_SAS \
+   tags='{"Environment":"dev"}' \
+   #--rollback-on-error \
+
+#exit 0
+# CosmosDB
+# COSMOSDB_DATABASE_ACCOUNT=$APPNAME
+# # Create the Cosmos DB database
+# echo "Creating CosmosDB resources"
+# $az cosmosdb database create \
+#    -g $RESOURCEGROUP \
+#    -n $COSMOSDB_DATABASE_ACCOUNT \
+#    -d $COSMOSDB_DATABASE_NAME
+
+# # Create the collection
+# $az cosmosdb collection create \
+#    -g $RESOURCEGROUP \
+#    -n $COSMOSDB_DATABASE_ACCOUNT \
+#    -d $COSMOSDB_DATABASE_NAME \
+#    -c $COSMOSDB_DATABASE_COL \
+#    --partition-key-path /id --throughput 10000
+
+
+exit 
+echo "Deploy Function"
+
+
+exit 
+echo "Deploying API Management"
+FUNCTIONAPP_KEY=<function-key-from-the-previous-step>
+
+FUNCTIONAPP_URL="https://$($az functionapp show -g ${RESOURCEGROUP} -n ${DRONE_STATUS_FUNCTION_APP_NAME} --query defaultHostName -o tsv)/api"
+
+
+$az group deployment create \
+   -g ${RESOURCEGROUP} \
+   --template-file azuredeploy-apim.json \
+   --parameters functionAppNameV1=${DRONE_STATUS_FUNCTION_APP_NAME} \
+           functionAppCodeV1=${FUNCTIONAPP_KEY} \
+           functionAppUrlV1=${FUNCTIONAPP_URL}

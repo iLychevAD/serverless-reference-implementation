@@ -1,0 +1,7 @@
+https://moimhossain.com/2020/04/03/azure-ad-app-via-arm-template-deployment-scripts/
+
+tpl, roles assignment
+https://docs.microsoft.com/en-us/azure/role-based-access-control/role-assignments-template
+
+https://docs.microsoft.com/en-us/azure/active-directory/develop/howto-add-app-roles-in-azure-ad-apps#assign-users-and-groups-to-roles
+

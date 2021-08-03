@@ -76,7 +76,7 @@
                 {
                     BoundedCapacity = 100000,
                     CancellationToken = cts.Token,
-                    MaxDegreeOfParallelism = 100,
+                    MaxDegreeOfParallelism = 10,
                 }
             );
 

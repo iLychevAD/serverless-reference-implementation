@@ -28,7 +28,8 @@ namespace DroneStatusFunctionApp
 
             if (!principal.IsAuthorizedByRoles(new[] { GetDeviceStatusRoleName }, log))
             {
-                return new UnauthorizedResult();
+                log.LogInformation("Ignore the principal role check");
+                //return new UnauthorizedResult();
             }
 
             string deviceId = req.Query["deviceId"];
