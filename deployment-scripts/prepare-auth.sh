@@ -20,7 +20,7 @@ then
     echo "Create new '$BE_API_APP_ID' app"
     BE_API_APP_ID=$(az ad app create --display-name $BE_API_APP_NAME --oauth2-allow-implicit-flow true \
     --native-app false --reply-urls http://localhost --identifier-uris "http://$BE_API_APP_NAME" \
-    --app-roles '  [ {  "allowedMemberTypes": [ "User" ], "description":"Access to drone status", "displayName":"Get Drone Device Status", "isEnabled":true, "value":"$BE_API_APP_DRONE_GET_STATUS_ROLE_NAME" }]' \
+    --app-roles '  [ {  "allowedMemberTypes": [ "User" ], "description":"Access to drone status", "displayName":"Get Drone Device Status", "isEnabled":true, "value":"'$BE_API_APP_DRONE_GET_STATUS_ROLE_NAME'" }]' \
     --required-resource-accesses '  [ {  "resourceAppId": "00000003-0000-0000-c000-000000000000", "resourceAccess": [ { "id": "e1fe6dd8-ba31-4d61-89e7-88639da4683d", "type": "Scope" } ] }]' \
     --query appId --output tsv | sed -e 's/[^a-z0-9-]//g')
     # Create a service principal for the registered application, not used in ARM templates
@@ -37,13 +37,13 @@ FE_API_APP_NAME=dev-dsaas-status-fe
 
 BE_API_IMPERSONATION_PERMISSION=$( az ad app show --id $BE_API_APP_ID --query "oauth2Permissions[?value == 'user_impersonation'].id" --output tsv )
 
-CDN_URL="https://${APPNAME}.azureedge.net"
+CDN_URL="${APPNAME}.azureedge.net"
 
 CLIENT_APP_ID=$( az ad app list --display-name $FE_API_APP_NAME -o tsv --query "[?displayName=='$FE_API_APP_NAME'].appId" )
 if [[ $CLIENT_APP_ID == "" ]]
 then
     CLIENT_APP_ID=$(az ad app create --display-name $FE_API_APP_NAME --oauth2-allow-implicit-flow true \
-    --native-app false --reply-urls "$CDN_URL" --identifier-uris "http://$FE_API_APP_NAME" \
+    --native-app false --reply-urls "https://${CDN_URL}" --identifier-uris "http://$FE_API_APP_NAME" \
     --required-resource-accesses "  [ { \"resourceAppId\": \"$BE_API_APP_ID\", \"resourceAccess\": [ { \"id\": \"$BE_API_IMPERSONATION_PERMISSION\", \"type\": \"Scope\" } ] }, { \"resourceAppId\": \"00000003-0000-0000-c000-000000000000\", \"resourceAccess\": [ { \"id\": \"e1fe6dd8-ba31-4d61-89e7-88639da4683d\", \"type\": \"Scope\" } ] } ]" \
     --query appId --output tsv | sed -e 's/[^a-z0-9-]//g')
 

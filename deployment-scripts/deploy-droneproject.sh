@@ -175,5 +175,8 @@ az storage blob service-properties update \
 
 . deployment-scripts/build-and-upload-client-app.sh
 
+# You will see the following message in web browser console if not acepted the consent:
+# error occurred: AADSTS65001: The user or administrator has not consented to use the application with ID '...' named '...'.
+# Send an interactive authorization request for this user and resource.
 prettyprint "Open a browser on 'https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/authorize?client_id=${CLIENT_APP_ID}&response_type=code&redirect_uri=https%3A%2F%2F${CDN_URL}&response_mode=query
 &scope=${BE_API_APP_ID}%2Fuser_impersonation&state=12345'"

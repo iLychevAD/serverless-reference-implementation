@@ -16,10 +16,11 @@ docker run --rm -it \
     do \
       ZIP_NAME=`echo $FUNC | sed -e "s|.*/\(.*\)$|\1|" | sed -e "s/App//"`; \
       echo Building $ZIP_NAME; \
-      dotnet publish /tmp/src/$FUNC \
+      cd /tmp/src/$FUNC && \
+      dotnet publish \
         --configuration Release \
-        --output `pwd`/${ZIP_NAME} && \
-          (cd ${ZIP_NAME} && zip -r /built/${ZIP_NAME}.zip *)
+        --output `pwd`/public && \
+          (cd `pwd`/public && zip -r /built/${ZIP_NAME}.zip *)
     done'
 
 # For notes:

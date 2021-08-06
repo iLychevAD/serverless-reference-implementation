@@ -23,13 +23,25 @@ namespace DroneStatusFunctionApp
                 PartitionKey = "{Query.deviceId}")] dynamic deviceStatus, 
             ClaimsPrincipal principal,
             ILogger log)
-        {
-            log.LogInformation("Processing GetStatus request.");
+        {   
+            string name = principal.Identity.Name;
+            string authType = principal.Identity.AuthenticationType;
+            string isAuthed = principal.Identity.IsAuthenticated.ToString();
+            log.LogInformation($"GetStatus request: {authType} {isAuthed} {name}");
+            foreach (var identity in principal.Identities)
+            {
+                log.LogInformation($"Identity {identity.Name}:");
+                log.LogInformation($"Auth type is {identity.AuthenticationType}");
+                foreach (var claim in identity.Claims)
+                {
+                    log.LogInformation($"Claim '{claim.Type}' = '{claim.Value}'");
+                }
+            }
 
             if (!principal.IsAuthorizedByRoles(new[] { GetDeviceStatusRoleName }, log))
             {
-                log.LogInformation("Ignore the principal role check");
-                //return new UnauthorizedResult();
+                log.LogInformation("Principal role check - not authorized!");
+                return new UnauthorizedResult();
             }
 
             string deviceId = req.Query["deviceId"];

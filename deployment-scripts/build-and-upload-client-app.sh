@@ -10,11 +10,11 @@ docker run --rm -it \
   node:12-buster \
     /bin/bash -e -c '
     mkdir /tmp/src && cp -ar /src/ClientApp /tmp/src && cd /tmp/src/ClientApp && \
-    npm install gatsby-cli  && \
+    npm install && \
     echo AZURE_TENANT_ID='$TENANT_ID' > .env.production && \
     echo AZURE_CLIENT_ID='$CLIENT_APP_ID' >> .env.production && \
     echo AZURE_API_CLIENT_ID='$BE_API_APP_ID' >> .env.production && \
-    echo AZURE_API_URL='$APPNAME'.azure-api.net >> .env.production && \
+    echo AZURE_API_URL=https://'$APPNAME'.azure-api.net >> .env.production && \
     cat .env.production && \
     node ./node_modules/.bin/gatsby build && \
     rm -rf /built/* && cp -ar public/* /built/ && \
@@ -23,7 +23,7 @@ docker run --rm -it \
 
 prettyprint "Uploading assets"
 
-UPLOAD_CMD=" az storage blob upload-batch -s ./built/clientapp --destination \$web --account-name ${droneStatusClientStorageAccountName} --only-show-errors "
+UPLOAD_CMD=" az storage blob upload-batch -s ./built/clientapp --destination \$web/content --account-name ${droneStatusClientStorageAccountName} --only-show-errors "
 ${UPLOAD_CMD} --pattern "*.html" --content-type "text/html" && \
 ${UPLOAD_CMD} --pattern "*.js" --content-type "application/javascript" && \
 ${UPLOAD_CMD} --pattern "*.js.map" --content-type "application/octet-stream" && \

@@ -13,6 +13,9 @@ import { auth } from "../services/auth"
 
 import { DroneStatusDetailsList } from "../components/drone-status"
 
+import { Title, Meta } from "react-head";
+const buildTimestamp = new Date();
+
 type IndexStyleProps = {};
 
 interface IndexStyles {
@@ -130,6 +133,8 @@ const App: React.FunctionComponent = () => {
       <Stack.Item align="start">
         <RestrictedContent />
       </Stack.Item>
+      <Title>Drone App</Title>
+      <Meta name="build-date-time" content={buildTimestamp} />
     </Stack>
   )
 }

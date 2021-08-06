@@ -4,5 +4,5 @@ module.exports = {
     description: `Fabrikam Drone status is a SPA static website deployed to Azure Blob storage with Azure CDN`,
     author: `@mspnp`,
   },
-  plugins: [`gatsby-plugin-typescript`],
+  plugins: [`gatsby-plugin-typescript`, 'gatsby-plugin-react-head'],
 }

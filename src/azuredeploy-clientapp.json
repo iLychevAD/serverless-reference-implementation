@@ -108,7 +108,7 @@
                 "[resourceId('Microsoft.Cdn/profiles', parameters('appName'))]"
             ],
             "properties": {
-                "originPath": "/.",
+                "originPath": "/content",
                 "contentTypesToCompress": [],
                 "isCompressionEnabled": false,
                 "isHttpAllowed": false,
