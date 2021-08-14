@@ -4,7 +4,7 @@ jobs:
   displayName: Deploy (actually not) Function App
   pool:
     vmImage: 'Ubuntu-16.04'
-  environment: '$(Build.SourceBranchName)-env'
+  environment: 'test-env-autocreation' #'$(Build.SourceBranchName)-env'
   strategy:
     runOnce:
       deploy:
