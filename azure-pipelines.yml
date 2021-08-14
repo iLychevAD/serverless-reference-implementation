@@ -33,10 +33,12 @@ stages:
 - stage: Deploy
   dependsOn: Build
   condition: succeeded('Build') #and(succeeded('Build'), eq(variables['build.sourceBranch'], variables['DeployableSourceBranch']))
+  variables:
+    env: '$(Build.SourceBranchName)-env' 
   jobs:
   - template: ./src/DroneStatus/azure-pipelines-cd.yml
     parameters:
-      env: '$(Build.SourceBranchName)-env'
+      env: '$(env)'
   # - job: dronestatuscd
   #   displayName: "Drone Status CD"
   #   steps:
