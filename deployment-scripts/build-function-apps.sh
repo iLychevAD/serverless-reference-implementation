@@ -4,7 +4,7 @@ set -e
 printf "\nBuild Function app code (zipped code is stored in the 'built' directory)\n"
 
 mkdir -p ./built
-docker run --rm -it \
+docker run --rm -i \
   --name droneapp-dotnetsdk-builder \
   -v `[[ -z "$HOST_PWD" ]] && pwd || echo "$HOST_PWD"`/src:/src \
   -v `[[ -z "$HOST_PWD" ]] && pwd || echo "$HOST_PWD"`/built:/built \
