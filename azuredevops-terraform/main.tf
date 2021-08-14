@@ -41,16 +41,16 @@ resource "azuredevops_project" "droneapp" {
   }
 }
 
-resource "azuredevops_build_definition" "ci" {
+resource "azuredevops_build_definition" "funcapp" {
   project_id      = azuredevops_project.droneapp.id
   #agent_pool_name = "Hosted Ubuntu 2004"
-  name            = "CI"
+  name            = "FunctionApp"
   path            = "\\"
   variable_groups = [azuredevops_variable_group.common.id]
   repository {
     repo_type             = "GitHub"
     repo_id               = var.MYREPO
-    branch_name           = "master"
+    branch_name           = "azdo"
     yml_path              = "azure-pipelines.yml"
     service_connection_id = azuredevops_serviceendpoint_github.github.id
   }
