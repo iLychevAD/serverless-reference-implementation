@@ -15,8 +15,11 @@ docker run --rm -i \
     for FUNC in DroneStatus/dotnet/DroneStatusFunctionApp DroneTelemetry/DroneTelemetryFunctionApp; \
     do \
       ZIP_NAME=`echo $FUNC | sed -e "s|.*/\(.*\)$|\1|" | sed -e "s/App//"`; \
+      cd /tmp/src/$FUNC; \
+      echo Run tests for $ZIP_NAME; \
+      dotnet test \
+        --configuration Release; \
       echo Building $ZIP_NAME; \
-      cd /tmp/src/$FUNC && \
       dotnet publish \
         --configuration Release \
         --output `pwd`/public && \

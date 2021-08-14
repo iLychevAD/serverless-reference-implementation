@@ -20,19 +20,19 @@ steps:
   displayName: 'Build FunctionApp in a tmp Docker contr'
   name: build_function_app_in_docker
 
-# Run tests
-- task: DotNetCoreCLI@2
-  displayName: Run tests for DroneStatus
-  inputs:
-    command: test
+# # Run tests
+# - task: DotNetCoreCLI@2
+#   displayName: Run tests for DroneStatus
+#   inputs:
+#     command: test
 
-    projects: '**/DroneStatus/dotnet/**.Tests/*.csproj'
+#     projects: '**/DroneStatus/dotnet/**.Tests/*.csproj'
 
-    publishTestResults: true
+#     publishTestResults: true
 
-    arguments: '--configuration Release'
+#     arguments: '--configuration Release'
 
-  enabled: true
+#   enabled: true
 
 # # Publish
 # - task: DotNetCoreCLI@2
