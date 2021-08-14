@@ -18,22 +18,26 @@ trigger:
 resources:
 - repo: self
 
-jobs:
+stages:
 
 # CI
-- job: dronestatusjobci
-  displayName: "Drone Status CI"
-  steps:
-  - template: ./src/DroneStatus/azure-pipelines-ci.yml
+- stage: Build
+  jobs:
+  - job: dronestatusjobci
+    displayName: "Drone Status CI"
+    steps:
+    - template: ./src/DroneStatus/azure-pipelines-ci.yml
 
 # CD
-- job: dronestatuscd
-  dependsOn: dronestatusjobci
-  condition: and(succeeded('dronestatusjobci'), eq(variables['build.sourceBranch'], variables['DeployableSourceBranch']))
-  displayName: "Drone Status CD"
-  steps:
-  - script: |
-      echo 'Hello!'
-    displayName: 'Stub'
-    name: stub
-#  - template: ./src/DroneStatus/azure-pipelines-cd.yml
+- stage: Deploy
+  jobs:
+  - job: dronestatuscd
+    dependsOn: dronestatusjobci
+    condition: and(succeeded('dronestatusjobci'), eq(variables['build.sourceBranch'], variables['DeployableSourceBranch']))
+    displayName: "Drone Status CD"
+    steps:
+    - script: |
+        echo 'Hello!'
+      displayName: 'Stub'
+      name: stub
+  #  - template: ./src/DroneStatus/azure-pipelines-cd.yml
