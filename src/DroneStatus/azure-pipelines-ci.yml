@@ -16,7 +16,7 @@ steps:
 
 # Build
 - script: |
-    bash deployment-scripts/build-function-apps.sh
+    bash -x deployment-scripts/build-function-apps.sh
   displayName: 'Build FunctionApp in a tmp Docker contr'
   name: build_function_app_in_docker
 
