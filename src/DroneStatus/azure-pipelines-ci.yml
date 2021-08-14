@@ -1,24 +1,28 @@
 steps:
 
-# Restore
-- task: DotNetCoreCLI@2
-  displayName: Restore
-  inputs:
-    command: restore
+# # Restore
+# - task: DotNetCoreCLI@2
+#   displayName: Restore
+#   inputs:
+#     command: restore
+#     projects: '**/DroneStatus/dotnet/**/*.csproj'
 
-    projects: '**/DroneStatus/dotnet/**/*.csproj'
+# # Build
+# - task: DotNetCoreCLI@2
+#   displayName: Build
+#   inputs:
+#     projects: '**/DroneStatus/dotnet/**/*.csproj'
+#     arguments: '--configuration $(BuildConfiguration)'
 
 # Build
-- task: DotNetCoreCLI@2
-  displayName: Build
-  inputs:
-    projects: '**/DroneStatus/dotnet/**/*.csproj'
-
-    arguments: '--configuration $(BuildConfiguration)'
+  - script: |
+      bash deployment-scripts/build-function-apps.sh
+    displayName: 'Build FunctionApp in a tmp Docker contr'
+    name: build-in-docker
 
 # Run tests
 - task: DotNetCoreCLI@2
-  displayName: Test
+  displayName: Run tests for DroneStatus
   inputs:
     command: test
 
@@ -26,26 +30,26 @@ steps:
 
     publishTestResults: true
 
-    arguments: '--configuration $(BuildConfiguration)'
+    arguments: '--configuration Release'
 
   enabled: true
 
-# Publish
-- task: DotNetCoreCLI@2
-  displayName: Publish
-  inputs:
-    command: publish
+# # Publish
+# - task: DotNetCoreCLI@2
+#   displayName: Publish
+#   inputs:
+#     command: publish
 
-    publishWebProjects: false
+#     publishWebProjects: false
 
-    projects: '**/DroneStatus/dotnet/DroneStatusFunctionApp/*.csproj'
+#     projects: '**/DroneStatus/dotnet/DroneStatusFunctionApp/*.csproj'
 
-    arguments: '--configuration $(BuildConfiguration) --output $(build.artifactstagingdirectory)'
+#     arguments: '--configuration $(BuildConfiguration) --output $(build.artifactstagingdirectory)'
 
-    zipAfterPublish: True
+#     zipAfterPublish: True
 
 # Publish Artifacts
 - task: PublishBuildArtifacts@1
-  displayName: 'Publish Artifact'
+  displayName: 'Publish Artifacts'
   inputs:
-    PathtoPublish: '$(build.artifactstagingdirectory)'
+    PathtoPublish: 'built' #'$(build.artifactstagingdirectory)'
