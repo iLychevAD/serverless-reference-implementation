@@ -34,11 +34,12 @@ stages:
   dependsOn: Build
   condition: and(succeeded('Build'), eq(variables['build.sourceBranch'], variables['DeployableSourceBranch']))
   jobs:
-  - job: dronestatuscd
-    displayName: "Drone Status CD"
-    steps:
+  - template: ./src/DroneStatus/azure-pipelines-cd.yml
+  # - job: dronestatuscd
+  #   displayName: "Drone Status CD"
+  #   steps:
     # - script: |
     #     echo 'Hello!'
     #   displayName: 'Stub'
     #   name: stub
-    - template: ./src/DroneStatus/azure-pipelines-cd.yml
+

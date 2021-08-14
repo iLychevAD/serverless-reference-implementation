@@ -1,4 +1,5 @@
-steps:
+#steps:
+jobs:
 - deployment: DeployFunctionApp
   displayName: Deploy (actually not) Function App
   pool:
