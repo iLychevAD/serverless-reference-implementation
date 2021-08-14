@@ -31,10 +31,10 @@ stages:
 
 # CD
 - stage: Deploy
+  dependsOn: Build
+  condition: and(succeeded('Build'), eq(variables['build.sourceBranch'], variables['DeployableSourceBranch']))
   jobs:
   - job: dronestatuscd
-    dependsOn: dronestatusjobci
-    condition: and(succeeded('dronestatusjobci'), eq(variables['build.sourceBranch'], variables['DeployableSourceBranch']))
     displayName: "Drone Status CD"
     steps:
     - script: |
