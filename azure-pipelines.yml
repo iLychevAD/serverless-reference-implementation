@@ -32,7 +32,7 @@ stages:
 # CD
 - stage: Deploy
   dependsOn: Build
-  condition: and(succeeded('Build'), eq(variables['build.sourceBranch'], variables['DeployableSourceBranch']))
+  condition: succeeded('Build') #and(succeeded('Build'), eq(variables['build.sourceBranch'], variables['DeployableSourceBranch']))
   jobs:
   - template: ./src/DroneStatus/azure-pipelines-cd.yml
   # - job: dronestatuscd
