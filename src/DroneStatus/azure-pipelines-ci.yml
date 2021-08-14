@@ -15,10 +15,10 @@ steps:
 #     arguments: '--configuration $(BuildConfiguration)'
 
 # Build
-  - script: |
-      bash deployment-scripts/build-function-apps.sh
-    displayName: 'Build FunctionApp in a tmp Docker contr'
-    name: build-in-docker
+- script: |
+    bash deployment-scripts/build-function-apps.sh
+  displayName: 'Build FunctionApp in a tmp Docker contr'
+  name: build-in-docker
 
 # Run tests
 - task: DotNetCoreCLI@2
