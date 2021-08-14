@@ -1,46 +1,60 @@
-steps:
-- task: AzureCLI@1
-  displayName: 'Azure CLI - Create Resource Group'
-  condition: eq(variables['DeployAzureResources'], true)
-  inputs:
-    azureSubscription: $(ServiceConnectionName)
+ steps:
+- deployment: DeployFunctionApp
+  displayName: Deploy (actually not) Function App
+  pool:
+    vmImage: 'Ubuntu-16.04'
+  environment: '$(Build.SourceBranchName)-env'
+  strategy:
+    runOnce:
+      deploy:
+        steps:
+        - script: |
+            echo "Deployed to $ENVIRONMENT_NAME"
+          displayName: 'Deploy !'
+          name: deploy
 
-    scriptLocation: inlineScript
+# - task: AzureCLI@1
+#   displayName: 'Azure CLI - Create Resource Group'
+#   condition: eq(variables['DeployAzureResources'], true)
+#   inputs:
+#     azureSubscription: $(ServiceConnectionName)
 
-    inlineScript: 'az group create -n $(ResourceGroup) -l $(Location)'
+#     scriptLocation: inlineScript
 
-- task: AzureCLI@1
-  displayName: 'Azure CLI - Deploy Function App and resources'
-  condition: eq(variables['DeployAzureResources'], true)
-  inputs:
-    azureSubscription: $(ServiceConnectionName)
+#     inlineScript: 'az group create -n $(ResourceGroup) -l $(Location)'
 
-    scriptLocation: inlineScript
+# - task: AzureCLI@1
+#   displayName: 'Azure CLI - Deploy Function App and resources'
+#   condition: eq(variables['DeployAzureResources'], true)
+#   inputs:
+#     azureSubscription: $(ServiceConnectionName)
 
-    inlineScript: 'az group deployment create -g $(ResourceGroup) --template-file ./src/DroneStatus/azuredeploy-slots.json --parameters appName="$(AppName)"'
+#     scriptLocation: inlineScript
 
-- task: DownloadBuildArtifacts@0
-  displayName: 'Download Build Artifacts'
-  inputs:
-    artifactName: drop
+#     inlineScript: 'az group deployment create -g $(ResourceGroup) --template-file ./src/DroneStatus/azuredeploy-slots.json --parameters appName="$(AppName)"'
 
-- task: AzureRmWebAppDeployment@4
-  displayName: 'Azure App Service Deploy: $(AppName)'
-  inputs:
-    azureSubscription: $(ServiceConnectionName)
+# - task: DownloadBuildArtifacts@0
+#   displayName: 'Download Build Artifacts'
+#   inputs:
+#     artifactName: drop
 
-    appType: functionApp
+# - task: AzureRmWebAppDeployment@4
+#   displayName: 'Azure App Service Deploy: $(AppName)'
+#   inputs:
+#     azureSubscription: $(ServiceConnectionName)
 
-    WebAppName: $(AppName)-ds-funcapp
+#     appType: functionApp
 
-    packageForLinux: '$(System.ArtifactsDirectory)/drop/DroneStatusFunctionApp.zip'
+#     WebAppName: $(AppName)-ds-funcapp
 
-    enableCustomDeployment: true
+#     packageForLinux: '$(System.ArtifactsDirectory)/drop/DroneStatusFunctionApp.zip'
 
-    DeploymentType: runFromZip
+#     enableCustomDeployment: true
 
-    deployToSlotOrASE: true
+#     DeploymentType: runFromZip
 
-    slotName: $(SlotName)
+#     deployToSlotOrASE: true
 
-    resourceGroupName: $(ResourceGroup)
+#     slotName: $(SlotName)
+
+#     resourceGroupName: $(ResourceGroup)

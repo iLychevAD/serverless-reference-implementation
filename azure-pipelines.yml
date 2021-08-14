@@ -7,7 +7,7 @@
 #   DeployableSourceBranch: 'refs/heads/staging'
 #   SlotName: '<slotName>'
 
-name: $(Date:yyyyMMdd)$(Rev:.rr)
+name: $(SourceBranchName)_$(Date:yyyyMMdd)$(Rev:.rr)
 
 trigger:
   branches:
@@ -37,8 +37,8 @@ stages:
   - job: dronestatuscd
     displayName: "Drone Status CD"
     steps:
-    - script: |
-        echo 'Hello!'
-      displayName: 'Stub'
-      name: stub
-  #  - template: ./src/DroneStatus/azure-pipelines-cd.yml
+    # - script: |
+    #     echo 'Hello!'
+    #   displayName: 'Stub'
+    #   name: stub
+    - template: ./src/DroneStatus/azure-pipelines-cd.yml
