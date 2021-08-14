@@ -18,7 +18,7 @@ steps:
 - script: |
     bash deployment-scripts/build-function-apps.sh
   displayName: 'Build FunctionApp in a tmp Docker contr'
-  name: build-in-docker
+  name: build_function_app_in_docker
 
 # Run tests
 - task: DotNetCoreCLI@2
