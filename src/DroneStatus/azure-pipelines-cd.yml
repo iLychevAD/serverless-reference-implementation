@@ -6,7 +6,7 @@ jobs:
     vmImage: 'Ubuntu-16.04'
   variables:
       env: '$(Build.SourceBranchName)-env' 
-  environment: '$(env)' #${{parameters.env}}  #'$(Build.SourceBranchName)-env'
+  environment: dev #'$(env)' #${{parameters.env}}  #'$(Build.SourceBranchName)-env'
   strategy:
     runOnce:
       deploy:
