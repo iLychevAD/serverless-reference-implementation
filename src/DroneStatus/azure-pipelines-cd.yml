@@ -4,7 +4,7 @@ jobs:
   displayName: Deploy (actually not) Function App
   pool:
     vmImage: 'Ubuntu-16.04'
-  environment: ${{parameters.env}}  #'$(Build.SourceBranchName)-env'
+  environment: $(env) #${{parameters.env}}  #'$(Build.SourceBranchName)-env'
   strategy:
     runOnce:
       deploy:
