@@ -38,7 +38,7 @@ stages:
   jobs:
   - template: ./src/DroneStatus/azure-pipelines-cd.yml
     parameters:
-      env: $(env)
+      env: '$(Build.SourceBranchName)-env'
   # - job: dronestatuscd
   #   displayName: "Drone Status CD"
   #   steps:
