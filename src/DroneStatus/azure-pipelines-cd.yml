@@ -12,7 +12,7 @@ jobs:
       deploy:
         steps:
         - script: |
-            echo "Deployed to $ENVIRONMENT_NAME"
+            echo "Deployed to $(Environment.Name)"
           displayName: 'Deploy !'
           name: deploy
 
